@@ -1,125 +1,305 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'home.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Demo Login',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a blue toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        primarySwatch: Colors.blue,
+        primaryColor: Color.fromRGBO(235, 31, 42, 1),
+        hintColor: Colors.orange[600],
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'Demo Login'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
+  MyHomePage({Key? key, required this.title}) : super(key: key);
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  // For LinearProgressIndicator.
+  bool _visible = false;
 
-  void _incrementCounter() {
+  // Controller untuk Pengeditan Teks dalam Input Nama Pengguna dan Kata Sandi
+  final userController = TextEditingController();
+  final pwdController = TextEditingController();
+
+  Future userLogin() async {
+    // Login API URL
+    // dan gunakan alamat IP lokal atau localhost atau gunakan API Web
+    String url = "http://192.168.43.236/restapi_sistem_login/user_login.php";
+
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _visible = true;
     });
+
+    // Mendapatkan nama pengguna dan kata sandi dari Controller
+    var data = {
+      'username': userController.text,
+      'password': pwdController.text,
+    };
+
+    // Memulai Panggilan WEB API.
+    var response = await http.post(Uri.parse(url), body: json.encode(data));
+
+    if (response.statusCode == 200) {
+      // Server response into variable
+      print(response.body);
+      var msg = jsonDecode(response.body);
+
+      // Cek Status Login
+      if (msg['loginStatus'] == true) {
+        setState(() {
+          // Menghide seluruh progress indicator
+          _visible = false;
+        });
+
+        // Navigate ke Tampilan Home Screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomePage(uname: msg['userInfo']['NAME']),
+          ),
+        );
+      } else {
+        setState(() {
+          // Menghide progress indicator
+          _visible = false;
+
+          // Tampilkan jika ada Error Message Dialog
+          showMessage(msg["message"]);
+        });
+      }
+    } else {
+      setState(() {
+        // Menghide progress indicator
+        _visible = false;
+
+        // Tampilkan Error Message Dialog
+        showMessage("Error during connecting to Server.");
+      });
+    }
   }
+
+  Future<dynamic> showMessage(String _msg) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: new Text(_msg),
+          actions: <Widget>[
+            TextButton(
+              child: new Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  final _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+    return SafeArea(
+      child: Scaffold(
+        body: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Visibility(
+                visible: _visible,
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 10.0),
+                  child: LinearProgressIndicator(),
+                ),
+              ),
+              Container(
+                height: 100.0,
+              ),
+              Icon(
+                Icons.group,
+                color: Theme.of(context).primaryColor,
+                size: 80.0,
+              ),
+              SizedBox(
+                height: 10.0,
+              ),
+              Text(
+                'Login Here',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 25.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(
+                height: 40.0,
+              ),
+              Form(
+                key: _formKey,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      Theme(
+                        data: ThemeData(
+                          primaryColor: Color.fromRGBO(84, 87, 90, 0.5),
+                          primaryColorDark: Color.fromRGBO(84, 87, 90, 0.5),
+                          hintColor: Color.fromRGBO(84, 87, 90, 0.5),
+                        ),
+                        child: TextFormField(
+                          controller: userController,
+                          decoration: InputDecoration(
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color.fromRGBO(84, 87, 90, 0.5),
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color.fromRGBO(84, 87, 90, 0.5),
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.red,
+                                width: 1.0,
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            labelText: 'Enter User Name',
+                            prefixIcon: const Icon(
+                              Icons.person,
+                              color: Color.fromRGBO(84, 87, 90, 0.5),
+                            ),
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color.fromRGBO(84, 87, 90, 0.5),
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            hintText: 'User Name',
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please Enter User Name';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      SizedBox(
+                        height: 20.0,
+                      ),
+                      Theme(
+                        data: ThemeData(
+                          primaryColor: Color.fromRGBO(84, 87, 90, 0.5),
+                          primaryColorDark: Color.fromRGBO(84, 87, 90, 0.5),
+                          hintColor: Color.fromRGBO(84, 87, 90, 0.5),
+                        ),
+                        child: TextFormField(
+                          controller: pwdController,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color.fromRGBO(84, 87, 90, 0.5),
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color.fromRGBO(84, 87, 90, 0.5),
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.red,
+                                width: 1.0,
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Color.fromRGBO(84, 87, 90, 0.5),
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            labelText: 'Enter Password',
+                            prefixIcon: const Icon(
+                              Icons.lock,
+                              color: Color.fromRGBO(84, 87, 90, 0.5),
+                            ),
+                            hintText: 'Password',
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please Enter Password';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      SizedBox(
+                        height: 20.0,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // Validate returns true if the form is valid, or
+                            // false otherwise.
+                            if (_formKey.currentState!.validate()) {
+                              userLogin();
+                            }
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text(
+                              'Submit',
+                              style: TextStyle(fontSize: 18.0),
+                            ),
+                          ),
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.all<Color>(
+                              Theme.of(context).primaryColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
